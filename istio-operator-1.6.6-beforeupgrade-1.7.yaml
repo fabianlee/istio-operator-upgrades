@@ -1,0 +1,69 @@
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: istio-control-plane-1-6-6
+spec:
+  profile: default
+  # CHANGED: should have installed with revision so canary upgrades possible
+  revision: 1-6-6
+
+  # avoid rate pull limits from docker.io
+  # https://istio.io/latest/blog/2020/docker-rate-limit/
+  values:
+    global:
+      hub: gcr.io/istio-release
+
+  addonComponents:
+    kiali:
+      enabled: false
+    # grafana and prometheus no longer supported in 1.7
+    grafana:
+      enabled: false
+    prometheus:
+      enabled: false
+    ### CHANGED: need to enable pilot addon before moving to 1.7.5
+    # else the ingress gateway does not upgrade which blocks the upgrade process
+    pilot:
+      enabled: true
+
+  components:
+    ingressGateways:
+      - namespace: istio-system
+        name: istio-ingressgateway
+        enabled: true
+        k8s:
+          hpaSpec:
+            minReplicas: 1
+            maxReplicas: 1
+          service:
+            ports:
+              - name: status-port
+                port: 15021
+                protocol: TCP
+                targetPort: 15021
+              - name: http2
+                port: 80
+                protocol: TCP
+                targetPort: 8080
+              - name: https
+                # must be in range 30000-32767, static so LB do not have to be reconfigured
+                nodePort: 32056
+                port: 443
+                protocol: TCP
+                targetPort: 8443
+              - name: tls
+                port: 15443
+                protocol: TCP
+                targetPort: 15443
+              - port: 31400
+                name: tcp
+          # no service annotations needed
+          #serviceAnnotations:
+          overlays:
+            - kind: Service
+              name: istio-ingressgateway
+              patches:
+                - path: spec.loadBalancerIP
+                  value: 192.168.2.143
