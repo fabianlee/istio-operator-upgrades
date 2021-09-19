@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 echo "*********************************"
 kubectl get deployments -n istio-operator
 kubectl describe deployments -n istio-operator | grep -E 'operator.istio.io/version|Image:'

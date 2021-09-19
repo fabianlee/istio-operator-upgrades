@@ -55,7 +55,7 @@ export istiover=1.6.6
 curl -L https://istio.io/downloadIstio | ISTIO_VERSION=$istiover sh -
 
 istio-$istiover/bin/istioctl x precheck
-# 1.6.6 does have a concept of '--revision 1-6-6', but we are purposely not going to use it here
+# 1.6.6 operator does NOT have a concept of '--revision 1-6-6'
 # https://console.cloud.google.com/gcr/images/istio-release/GLOBAL
 $ istio-$istiover/bin/istioctl operator init --hub gcr.io/istio-release
 Using operator Deployment image: gcr.io/istio-release/operator:1.6.6
@@ -64,13 +64,15 @@ Using operator Deployment image: gcr.io/istio-release/operator:1.6.6
 
 kubectl get all -n istio-operator
 
+kubectl create ns istio-system
+
 $ kubectl apply -f istio-operator-1.6.6-no-revision.yaml
 istiooperator.install.istio.io/istio-control-plane created
 
 # until you see "Ingress gateways installed"
 ./show-istio-operator-logs.sh default
 
-# then wait for all components to be 'Running'
+# then wait for all components to be 'Running' (istiod,istio-ingressgateway,grafana,prometheus)
 $ kubectl get pods -n istio-system
 $ kubectl wait --for="condition=Ready" pods -l="app in (istio-ingressgateway,istiod)" -n istio-system
 pod/istiod-65b57c788-hs8t6 condition met
@@ -80,10 +82,10 @@ pod/istio-ingressgateway-84cc5bf55b-sqxrc condition met
 kubectl get services -n istio-system
 
 # apply legacy namespace labels for 1.6.6 (older 'istio-injection')
-istio-operator/namespace-labels-legacy.sh
+./set-namespace-labels-legacy.sh
 
 # notice because of no revision there are no versions on: operator, iop, istiod, mutatingwebhook
-istio-operator/show-istio-versions.sh
+./show-istio-objects.sh
 
 # 'my-istio-deployment' and 'my-istio-service'
 kubectl apply -f istio-operator/my-istio-deployment-and-service.yaml
@@ -113,29 +115,37 @@ Hostname: my-istio-deployment-d6cbc8689-cmtxx
 #
 
 # change to newer style namespace labels
-cd ~/k8s
-istio-operator/namespace-labels.sh 1-6-6
+./set-namespace-labels.sh 1.6.6
 
 # make pilot addon explicit and make control plane revision '1-6-6' for istiod and istiosidecareinjector
-kubectl apply -f istio-operator/istio-operator-1.6.6-beforeupgrade-1.7.5.yaml
+kubectl apply -f istio-operator-1.6.6-prepare-for-1.7.yaml
 
 # until you see "Addons installed"
-istio-operator/show-istio-operator-logs.sh default
+./show-istio-operator-logs.sh default
 
 # notice new revisions on: istiod, iop, mutatingwebhook
-istio-operator/show-istio-versions.sh
+./show-istio-objects.sh
 
 # delete default (no-revision) control plane objects leaving only the revision ones
 # leave operator 'istio-operator'
-istio-operator/delete-no-revision-controlplane.sh
+./delete-non-revision-controlplane.sh
 
 # notice the only vestige of non-revisioned objects is the operator 'istio-operator'
 # will get removed after 1.7.5 installed
-istio-operator/show-istio-versions.sh
+./show-istio-versions.sh
 
 # rolling deployment restart, but not really needed since the proxyv2:1.6.6 was already applied
 kubectl rollout restart -n default deployment/my-istio-deployment
 kubectl rollout status deployment my-istio-deployment
+
+
+# remove older addons, that are not supported anymore
+$ kubectl delete -n istio-system deployment/prometheus
+$ kubectl delete -n istio-system service/prometheus
+deployment.apps "prometheus" deleted
+$ kubectl delete -n istio-system deployment/grafana
+$ kubectl delete -n istio-system service/grafana
+deployment.apps "grafana" deleted
 
 
 #
@@ -159,8 +169,11 @@ Using operator Deployment image: docker.io/istio/operator:1.7.5
 # now have 2 operators, one revisioned at 1-7-5
 kubectl get all -n istio-operator
 
+# create iop object with revisioned control plane 
+$ kubectl create -f istio-operator-1.7.5.yaml
+
 # until you see "Ingress gateways installed"
-istio-operator/show-istio-operator-logs.sh 1-7-5
+./show-istio-operator-logs.sh 1-7-5
 
 # then wait for all components to be 'Running'
 watch -n2 kubectl get pods -n istio-system
@@ -170,15 +183,16 @@ istiod-1-6-6-56c494d958-qp9j6           1/1     Running   0          3m47s
 istiod-1-7-5-645d5c6d46-jrzmw           1/1     Running   0          50s
 
 # apply namespace label istio.io/rev to default ns
-istio-operator/namespace-labels.sh 1-7-5
+./set-namespace-labels.sh 1-7-5
 
-istio-operator/show-istio-versions.sh
+# show object versions
+./show-istio-objects.sh
 
 # rolling deployment restart, then wait for it to finish
 kubectl rollout restart -n default deployment/my-istio-deployment
 kubectl rollout status  -n default deployment my-istio-deployment
 
-istio-operator/show-istio-versions.sh
+./show-istio-objects.sh
 
 
 #
@@ -186,16 +200,15 @@ istio-operator/show-istio-versions.sh
 #
 
 # will see both 1-6-6 and 1-7-5 control planes
-istio-operator/show-istio-versions.sh
-
-# switch over iop to new revision
-kubectl patch -n istio-system --type merge iop/istio-control-plane -p '{"spec":{"revision":"1-7-5"}}'
+./show-istio-objects.sh
 
 # wait for state to go HEALTHY for 1-7-5, about 90 seconds
 watch kubectl get -n istio-system iop
 
 # delete old non-revision istio operator deployment and service
-istio-operator/delete-no-revision-operator.sh
+./delete-revisioned-controlplane.sh istio-1.6.6/bin/istioctl 1.6.6
+
+./delete-non-revision-operator.sh
 # remove versioned sidecar injector, istiod service and deployment 
 kubectl delete mutatingwebhookconfiguration/istio-sidecar-injector-1-6-6
 kubectl delete -n istio-system service/istiod-1-6-6

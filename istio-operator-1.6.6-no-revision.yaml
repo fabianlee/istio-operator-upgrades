@@ -6,7 +6,9 @@ metadata:
   name: istio-control-plane
 spec:
   profile: default
-  # should install with revision so canary upgrades possible
+  # although 1.6 operator does not have '--revision' for operator
+  # it does support revision tag for other control plane objects
+  # but we are going to purposely skip, so later we can upgrade to revisioned control plane
   #revision: 1-6-6
 
   # avoid rate pull limits from docker.io
@@ -18,6 +20,7 @@ spec:
   addonComponents:
     kiali:
       enabled: false
+    # enable metric components that become deprecated in 1.7 and removed in 1.8
     grafana:
       enabled: true
     prometheus:

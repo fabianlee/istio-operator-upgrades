@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # delete istio object in non-revision control plane
+#
+source ./delete-ns-completely.sh
 
 
 timeout 90s kubectl delete -n istio-system iop/istio-control-plane
@@ -13,51 +15,49 @@ else
 fi
 kubectl get -n istio-system iop
 
-ns=istio-operator
+
+read -p "Delete the istio-operator/istio-operator (y/N)?" answer
+if [ "$answer" == "y" ]; then
+  ns=istio-operator
+  kubectl delete deployment/istio-operator -n $ns
+  sleep 10
+  # delete services
+  kubectl delete service/istio-operator -n $ns
+  sleep 10
+  # show objects now
+  kubectl get all -n $ns
+fi
 
 
 set -x
-kubectl delete deployment/istio-operator -n $ns
+ns=istio-system
+
+# delete deployments
+kubectl delete deployment/istiod -n $ns
 sleep 10
 
-# delete services
-kubectl delete service/istio-operator -n $ns
-
-# show components now
-kubectl get all -n $ns
-
-
-ns=istio-system
+kubectl delete service/istiod -n $ns
+sleep 10
 
 # show horizontal pod autoscalers
 kubectl get hpa -n $ns
-
-# delete hpa
 kubectl delete hpa/istiod -n $ns
-
 sleep 10
 
 # show pod disruption budgets
 kubectl get pdb -n $ns
-
-# delete pdb
 kubectl delete pdb/istiod -n $ns
-
 sleep 10
-
-# delete deployments
-kubectl delete deployment/istiod -n $ns
-
-sleep 10
-
-# delete services
-kubectl delete service/istiod -n $ns
 
 # delete mutatingwebhookconfiguration
 kubectl delete mutatingwebhookconfiguration/istio-sidecar-injector
-
 sleep 10
+
+for cm_name in $(kubectl get cm -n istio-system -l="istio.io/rev=default" --output=jsonpath={.items[*].metadata.name}); do
+  kubectl -n istio-system delete cm/$cm_name
+done
 
 # show components now
 kubectl get all -n $ns
 
+delete_entire_istio_ns
