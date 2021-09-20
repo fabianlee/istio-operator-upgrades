@@ -14,40 +14,23 @@ else
 fi
 kubectl get -n istio-system iop
 
+
 #
 # none of these deletions should be necessary, the iop deletion should have taken care of
 #
 set -x
 ns=istio-system
 
-# delete deployments
-kubectl delete deployment/istiod -n $ns
-sleep 10
-
-kubectl delete service/istiod -n $ns
-sleep 10
-
-# show horizontal pod autoscalers
-kubectl get hpa -n $ns
-kubectl delete hpa/istiod -n $ns
-sleep 10
-
-# show pod disruption budgets
-kubectl get pdb -n $ns
-kubectl delete pdb/istiod -n $ns
-sleep 10
-
-# delete mutatingwebhookconfiguration
-kubectl delete mutatingwebhookconfiguration/istio-sidecar-injector
-sleep 10
-
-for cm_name in $(kubectl get cm -n istio-system -l="istio.io/rev=default" --output=jsonpath={.items[*].metadata.name}); do
-  kubectl -n istio-system delete cm/$cm_name
-done
-
-# show components now
+echo "Did iop deletion remove these?"
+kubectl get -n $ns iop
+kubectl get -n $ns cm
+kubectl get  mutatingwebhookconfiguration
+kubectl get -n deployment istiod
+kubectl get -n service istiod
+kubectl get -n hpa istiod
+kubectl get -n pdb istiod
+kubectl get -n configmap
 kubectl get all -n $ns
-
 
 # optionally delete operator
 read -p "Delete the istio-operator/istio-operator (y/N)?" answer
