@@ -3,7 +3,7 @@
 # removes revisioned istio control plan
 # and optionally the iop and entire istio namespaces
 #
-source ./delete-ns-completely.sh
+source ./delete-include.sh
 
 if [ $# -lt 2 ]; then
   echo "Usage: istioctlPath <istioVersion>"

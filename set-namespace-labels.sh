@@ -3,6 +3,7 @@
 if [ $# -lt 1 ]; then
   echo "Usage: <istioVersion>"
   echo "Example: 1.7.5"
+  exit 1
 fi
 
 # convert dotted version to hypenated version label

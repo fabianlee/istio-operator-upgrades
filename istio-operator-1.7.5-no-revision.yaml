@@ -2,12 +2,13 @@
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
-  name: istio-control-plane-1-7-6
+  name: istio-control-plane
   namespace: istio-system
 
 spec:
   profile: default
-  revision: "1-7-6"
+  # purposely no revision, so we can apply it later
+  #revision: "1-7-5"
 
   # avoid rate pull limits from docker.io
   # https://istio.io/latest/blog/2020/docker-rate-limit/

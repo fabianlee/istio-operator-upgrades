@@ -22,7 +22,7 @@ if [ "$answer" == "y" ]; then
       sleep 20
 
       kubectl get ns $ns
-      if [ $? -ne 0 ]; then
+      if [ $? -eq 0 ]; then
         echo "Using raw patch of empty finalizers to try to delete ns $ns"
 
         # if you really cannot get ns deleted

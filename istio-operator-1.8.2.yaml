@@ -1,9 +1,4 @@
 ---
-kind: Namespace
-apiVersion: v1
-metadata:
-  name: istio-system
----
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
@@ -72,9 +67,8 @@ spec:
               name: istio-ingressgateway
               patches:
                 - path: spec.loadBalancerIP
-                  value: 192.168.142.253
-                # not using MetalLB, so do not need this
+                  value: 192.168.2.143
                 # needs to match MetalLB endpoint
-                #- path: spec.loadBalancerSourceRanges
-                #  value: [ 10.0.0.0/8, 192.0.0.0/8 ]
+                - path: spec.loadBalancerSourceRanges
+                  value: [ 10.0.0.0/8, 192.0.0.0/8 ]
 

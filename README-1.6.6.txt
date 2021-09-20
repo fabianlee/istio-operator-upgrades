@@ -139,15 +139,6 @@ kubectl rollout restart -n default deployment/my-istio-deployment
 kubectl rollout status deployment my-istio-deployment
 
 
-# remove older addons, that are not supported anymore
-$ kubectl delete -n istio-system deployment/prometheus
-$ kubectl delete -n istio-system service/prometheus
-deployment.apps "prometheus" deleted
-$ kubectl delete -n istio-system deployment/grafana
-$ kubectl delete -n istio-system service/grafana
-deployment.apps "grafana" deleted
-
-
 #
 # installing revisioned 1.7.5
 #
@@ -227,10 +218,6 @@ $ istio-operator/show-istio-versions.sh
 # DO NOT use this because it deletes all operators!
 # $ istio-1.6.6/bin/istioctl operator remove
 
-# 1.7.5 experimental uninstall to remove 1-6-6 revision?
-# 'x uninstall' without revision is not a valid syntax, need to provide revision or file
-# this does not work, deletes too much!
-$ istio-1.7.5/bin/istioctl x uninstall -f istio-operator/istio-operator-1.6.6-beforeupgrade-1.7.5.yaml
 ##################################################
 
 

@@ -2,7 +2,7 @@
 #
 # delete istio object in non-revision control plane
 #
-source ./delete-ns-completely.sh
+source ./delete-include.sh
 
 
 timeout 90s kubectl delete -n istio-system iop/istio-control-plane
