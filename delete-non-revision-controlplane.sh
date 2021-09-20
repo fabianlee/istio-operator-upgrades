@@ -3,7 +3,7 @@
 # delete istio object in non-revision control plane
 #
 
-
+# deleting the iop should be sufficient to remove all the non-revisioned control plane objects
 timeout 90s kubectl delete -n istio-system iop/istio-control-plane
 if [ $? -eq 0 ]; then
   echo "iop deleted normally"
@@ -14,20 +14,9 @@ else
 fi
 kubectl get -n istio-system iop
 
-
-read -p "Delete the istio-operator/istio-operator (y/N)?" answer
-if [ "$answer" == "y" ]; then
-  ns=istio-operator
-  kubectl delete deployment/istio-operator -n $ns
-  sleep 10
-  # delete services
-  kubectl delete service/istio-operator -n $ns
-  sleep 10
-  # show objects now
-  kubectl get all -n $ns
-fi
-
-
+#
+# none of these deletions should be necessary, the iop deletion should have taken care of
+#
 set -x
 ns=istio-system
 
@@ -58,3 +47,17 @@ done
 
 # show components now
 kubectl get all -n $ns
+
+
+# optionally delete operator
+read -p "Delete the istio-operator/istio-operator (y/N)?" answer
+if [ "$answer" == "y" ]; then
+  ns=istio-operator
+  kubectl delete deployment/istio-operator -n $ns
+  sleep 10
+  # delete services
+  kubectl delete service/istio-operator -n $ns
+  sleep 10
+  # show objects now
+  kubectl get all -n $ns
+fi
