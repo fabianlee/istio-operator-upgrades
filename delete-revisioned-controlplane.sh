@@ -58,7 +58,7 @@ if [ "$answer" == "y" ]; then
     echo "iop deleted normally"
   else
     echo "iop not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
-    kubectl get istiooperator.install.istio.io/istio-control-plane -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
+    kubectl get istiooperator.install.istio.io/istio-control-plane-${revision_hyphenated} -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
     sleep 5
   fi
 
