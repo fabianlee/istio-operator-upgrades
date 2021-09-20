@@ -3,7 +3,6 @@
 # removes revisioned istio control plan
 # and optionally the iop and entire istio namespaces
 #
-source ./delete-include.sh
 
 if [ $# -lt 2 ]; then
   echo "Usage: istioctlPath <istioVersion>"
@@ -36,11 +35,6 @@ for cm_name in $(kubectl get cm -n istio-system -l="istio.io/rev=$revision_hyphe
   kubectl -n istio-system delete cm/$cm_name
 done
 
-#echo do rolling restart of deployment and wait for ready
-#kubectl rollout restart -n default deployment/my-istio-deployment
-#kubectl rollout status deployment my-istio-deployment
-#kubectl get pods -lapp=my-istio-deployment
-
 echo remove control plane for istio $istiover revision $revision_hyphenated
 if [[ "$istiover" < "1.7" ]]; then
   echo "istio versions less than 1.7 do not have 'operator --revision' flag, skipping istioctl to do operator removal"
@@ -71,6 +65,3 @@ if [ -n "$revision_hyphenated" ]; then
 else
   kubectl delete mutatingwebhookconfiguration/istio-sidecar-injector
 fi
-
-delete_entire_istio_ns
-
