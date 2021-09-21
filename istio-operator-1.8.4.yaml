@@ -1,0 +1,74 @@
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: istio-control-plane-1-8-3
+  namespace: istio-system
+
+spec:
+  profile: default
+  revision: "1-8-4"
+
+  # avoid rate pull limits from docker.io
+  # https://istio.io/latest/blog/2020/docker-rate-limit/
+  values:
+    global:
+      hub: gcr.io/istio-release
+
+  addonComponents:
+    pilot:
+      enabled: true
+# DEPRECATED third-party telementry in 1.8.x
+# https://istio.io/latest/news/releases/1.8.x/announcing-1.8/change-notes/
+#    kiali:
+#      enabled: false
+#    grafana:
+#      enabled: false
+#    prometheus:
+#      enabled: false
+
+  components:
+    ingressGateways:
+      - namespace: istio-system
+        name: istio-ingressgateway
+        enabled: true
+        k8s:
+          hpaSpec:
+            minReplicas: 1
+            maxReplicas: 1
+            
+          service:
+            ports:
+            - name: status-port
+              port: 15021
+              protocol: TCP
+              targetPort: 15021
+            - name: http2
+              nodePort: 32600
+              port: 80
+              protocol: TCP
+              targetPort: 8080
+            - name: https
+              nodePort: 32601
+              port: 443
+              protocol: TCP
+              targetPort: 8443
+            - name: tcp
+              port: 31400
+              protocol: TCP
+              targetPort: 31400
+            - name: tls
+              port: 15443
+              protocol: TCP
+              targetPort: 15443
+
+          overlays:
+            - kind: Service
+              name: istio-ingressgateway
+              patches:
+                - path: spec.loadBalancerIP
+                  value: 192.168.2.143
+                # needs to match MetalLB endpoint
+                - path: spec.loadBalancerSourceRanges
+                  value: [ 10.0.0.0/8, 192.0.0.0/8 ]
+

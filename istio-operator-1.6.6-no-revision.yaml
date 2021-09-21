@@ -22,9 +22,9 @@ spec:
       enabled: false
     # enable metric components that become deprecated in 1.7 and removed in 1.8
     grafana:
-      enabled: true
+      enabled: false
     prometheus:
-      enabled: true
+      enabled: false
 
   components:
     ingressGateways:
