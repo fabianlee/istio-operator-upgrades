@@ -80,6 +80,11 @@ while [ $count_ready -lt 3 ]; do
 done
 echo "moving on, $count_ready pods ready"
 
+# remove legacy labels
+for ns in default istio-system istio-operator; do
+  kubectl label namespace $ns istio-injection-
+done
+
 kubectl label namespace default istio.io/rev=$revision_hyphenated_new --overwrite=true
 kubectl get namespace -L istio.io/rev
 
@@ -179,11 +184,17 @@ $script_path/purge-all-istio.sh $istiover_new
 
 for the_iop in istio-control-plane istio-control-plane-${revision_hyphenated_old} istio-control-plane-${revision_hyphenated_new}; do
 
-timeout 60s kubectl delete -n istio-system iop/$the_iop
+# does this object exist?
+kubectl get -n istio-system iop/$the_iop
+if [ $? -ne 0 ]; then
+  continue
+fi
+
+timeout 120s kubectl delete -n istio-system iop/$the_iop
 if [ $? -eq 0 ]; then
   echo "iop $the_iop deleted normally"
 else
-  echo "iop $the_iop not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
+  echo "iop $the_iop not deleted normally after waiting 120 seconds, going to empty metadata.finalizers list"
   kubectl get istiooperator.install.istio.io/$the_iop -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
 fi
 

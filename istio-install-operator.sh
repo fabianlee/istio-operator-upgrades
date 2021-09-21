@@ -46,6 +46,11 @@ while [ $count_ready -lt 2 ]; do
 done
 echo "moving on, $count_ready pods ready"
 
+# remove older style labels
+for ns in default istio-system istio-operator; do
+  kubectl label namespace $ns istio-injection-
+done
+
 kubectl label namespace default istio.io/rev=$revision_hyphenated_new --overwrite=true
 kubectl get namespace -L istio.io/rev
 

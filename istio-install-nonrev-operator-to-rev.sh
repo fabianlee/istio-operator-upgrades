@@ -146,7 +146,12 @@ if [[ $istiover =~ ^1.6 ]] ; then
   echo "since this is 1.6, you cannot have a --revision flag and there is only a single operator"
   echo "therefore we are not deleting the operator.  Deleting the iop will delete all relevant default control plane objects"
 else
-  $script_path/istio-$istiover/bin/istioctl operator remove --revision ${revision_hyphenated}
+  # we cannot use this, because the non-rev operator was installed
+  #$script_path/istio-$istiover/bin/istioctl operator remove --revision ${revision_hyphenated}
+  operator_name_old=istio-operator
+  echo the operator_name_old is $operator_name_old
+  kubectl delete deployment/$operator_name_old -n istio-operator
+  kubectl delete service/$operator_name_old -n istio-operator
   echo going to settle for 15 seconds
   sleep 15
 fi
@@ -154,10 +159,10 @@ fi
 if [[ $istiover =~ ^1.6 ]] ; then 
   echo "for istio 1.6, only have single operator and deleting the iop is sufficient to remove all the default control plane objects"
 else
-  echo "do we need to do x uninstall ?"
-  echo $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/../istio-operator-$istiover-no-revision.yaml
-  #echo going to settle for 10 seconds
-  #sleep 10
+  echo "we need to do x uninstall or older control plane objects will not be deleted"
+  $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/istio-operator-$istiover-no-revision.yaml
+  echo going to settle for 10 seconds
+  sleep 10
 fi
 
 echo going to settle for 15 seconds
@@ -193,10 +198,10 @@ fi
 if [[ $istiover =~ ^1.6 ]] ; then 
   echo "for istio 1.6, only have single operator and deleting the iop is sufficient to remove all the default control plane objects"
 else
-  echo "do we need to do x uninstall ?"
-  echo $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/../istio-operator-$istiover-no-revision.yaml
-  #echo going to settle for 10 seconds
-  #sleep 10
+  #echo "do we need to do x uninstall ?"
+  $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/istio-operator-$istiover-no-revision.yaml
+  echo going to settle for 10 seconds
+  sleep 10
 fi
 
 $script_path/show-istio-objects.sh
