@@ -137,53 +137,19 @@ EOF
   kubectl delete deployment/$operator_name_old -n istio-operator
   kubectl delete service/$operator_name_old -n istio-operator
 else
-  # remove operator
-  $script_path/istio-$istiover_old/bin/istioctl operator remove --revision ${revision_hyphenated_old}
-  # remove related objects
+  
+  # remove operator, if it still exists
+  # in 1.7 this is not necessary because the iop deletion deletes it
+  kubectl get -n istio-system iop istio-control-plane-${revision_hyphenated_old}
+  if [ $? -eq 0 ]; then
+    $script_path/istio-$istiover_old/bin/istioctl operator remove --revision ${revision_hyphenated_old}
+  fi
+
+  # finally remove related objects
   $script_path/istio-$istiover_old/bin/istioctl x uninstall --revision ${revision_hyphenated_old} -y
 fi
 echo going to settle for 10 seconds
 sleep 10
-
-$script_path/show-istio-objects.sh
-;;
-
-
-99)
-
-# construct jsonpath filter in heredoc to avoid complex escaping
-# we lookup operator name with revision instead of name because it could have been created with revision or default
-#read -r -d '' cmd <<EOF
-#kubectl get deployment \
-#-n istio-system \
-#--output jsonpath='{.items[?(@.spec.selector.matchLabels.istio\.io/rev=="$revision_hyphenated_old")].metadata.name}'
-#EOF
-operator_count=$(kubectl get deployment -n istio-operator | wc -l)
-if [ $operator_count -gt 1 ]; then
-  read -r -d '' cmd <<EOF
-  kubectl get deployment -n istio-operator -o=jsonpath='{.items[?(@.metadata.labels.operator\.istio\.io/version=="$istiover_old")].metadata.name}'
-EOF
-  operator_name_old=$($cmd | tr -d "'")
-  echo the operator_name_old is $operator_name_old
-  
-  kubectl delete deployment/$operator_name_old -n istio-operator
-  kubectl delete service/$operator_name_old -n istio-operator
-else
-  echo "there was less than 2 operators, so not able to proceed with any operator deletion"
-fi
-
-# delete iop, which should cascade deletion of control plane objects
-timeout 120s kubectl delete -n istio-system iop/istio-control-plane-${revision_hyphenated_old}
-if [ $? -eq 0 ]; then
-  echo "iop $revision_hyphenated_old deleted normally"
-else
-  echo "iop $revision_hyphenated_old not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
-  kubectl get istiooperator.install.istio.io/istio-control-plane-${revision_hyphenated_old} -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
-fi
-echo going to settle for 15 seconds
-sleep 15
-
-# relevant control plane objects deleted as part of iop deletion
 
 $script_path/show-istio-objects.sh
 ;;
