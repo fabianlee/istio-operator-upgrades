@@ -1,6 +1,6 @@
-Scripts and manifests to support Istio operator installation and upgrades
+# Scripts and manifests to support Istio operator installation and upgrades
 
-Supporting blog articles:
+## Supporting blog articles:
 
 https://fabianlee.org/2021/09/19/istio-upgrading-from-istio-1-6-operator-without-revision-to-1-7-fully-revisioned-control-plane/
 
