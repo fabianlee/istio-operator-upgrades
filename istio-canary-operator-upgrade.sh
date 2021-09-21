@@ -143,6 +143,8 @@ else
   kubectl get -n istio-system iop istio-control-plane-${revision_hyphenated_old}
   if [ $? -eq 0 ]; then
     $script_path/istio-$istiover_old/bin/istioctl operator remove --revision ${revision_hyphenated_old}
+  else
+    echo "istio control plane must have already been deleted, so skipping"
   fi
 
   # finally remove related objects
