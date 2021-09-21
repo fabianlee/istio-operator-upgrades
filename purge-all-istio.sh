@@ -41,11 +41,15 @@ if [ $? -eq 0 ]; then
   if [ $? -eq 0 ]; then
     echo "iop deleted normally"
   else
-    echo "iop not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
-    kubectl get istiooperator.install.istio.io/istio-control-plane-${revision_hyphenated} -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
-  fi
+    echo "iop not deleted normally, trying no grace period and force"
+    timeout 60s kubectl delete -n istio-system iop/istio-control-plane-${revision_hyphenated} --grace-period=0 --force
+    if [ $? -eq 0 ]; then
+      echo "iop not deleted normally, going to empty metadata.finalizers list"
+      kubectl get istiooperator.install.istio.io/istio-control-plane-${revision_hyphenated} -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
+    fi # finalizers
+  fi # grace period
   sleep 30
-fi
+fi # if exists
 
 
 echo ""

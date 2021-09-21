@@ -69,15 +69,11 @@ while [ $count_ready -lt 2 ]; do
 done
 echo "moving on, $count_ready pods ready"
 
-# label according to older 1.6 spec or newer
-if [[ $istiover =~ ^1.6 ]] ; then 
-  for the_ns in istio-operator default; do
-    kubectl label namespace $the_ns istio-injection=disabled --overwrite=true
-  done
-else
-  kubectl label namespace default istio.io/rev=$revision_hyphenated --overwrite=true
-  kubectl get namespace -L istio.io/rev
-fi
+# mutataingwebhook matchLabels set to 'istio-injection' for non-revisioned plane
+kubectl label namespace istio-operator istio-injection=disabled --overwrite=true
+kubectl label namespace default istio-injection=enabled --overwrite=true
+# should now have labels
+kubectl get namespace -L istio-injection
 
 $script_path/show-istio-objects.sh
 ;;
@@ -114,8 +110,16 @@ while [ $count_ready -lt 3 ]; do
 done
 echo "moving on, $count_ready pods ready"
 
+
+# remove non-revisioned plane labels
+kubectl label namespace istio-operator istio-injection-
+kubectl label namespace default istio-injection-
+kubectl get namespace -L istio-injection
+
+# apply revisioned plane labels
 kubectl label namespace default istio.io/rev=$revision_hyphenated --overwrite=true
 kubectl get namespace -L istio.io/rev
+
 
 $script_path/show-istio-objects.sh
 ;;
@@ -124,6 +128,7 @@ $script_path/show-istio-objects.sh
 
 3)
 kubectl rollout restart -n default deployments
+# kubectl rollout status deploy <deploymentName>
 echo going to settle for 15 seconds
 sleep 15
 ;;
@@ -134,8 +139,12 @@ timeout 120s kubectl delete -n istio-system iop/istio-control-plane
 if [ $? -eq 0 ]; then
   echo "iop default deleted normally"
 else
-  echo "iop default not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
-  kubectl get istiooperator.install.istio.io/istio-control-plane -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
+  echo "iop default not deleted, trying no grace period and force"
+  timeout 90s kubectl delete -n istio-system iop/istio-control-plane --grace-period=0 --force
+  if [ $? -eq 0 ]; then
+    echo "iop default not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
+    kubectl get istiooperator.install.istio.io/istio-control-plane -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
+  fi
   echo going to settle for 15 seconds
   sleep 30
 fi
@@ -146,8 +155,7 @@ if [[ $istiover =~ ^1.6 ]] ; then
   echo "since this is 1.6, you cannot have a --revision flag and there is only a single operator"
   echo "therefore we are not deleting the operator.  Deleting the iop will delete all relevant default control plane objects"
 else
-  # we cannot use this, because the non-rev operator was installed
-  #$script_path/istio-$istiover/bin/istioctl operator remove --revision ${revision_hyphenated}
+  # we cannot use 'operator remove --revision', because the non-rev operator was installed
   operator_name_old=istio-operator
   echo the operator_name_old is $operator_name_old
   kubectl delete deployment/$operator_name_old -n istio-operator
@@ -159,7 +167,7 @@ fi
 if [[ $istiover =~ ^1.6 ]] ; then 
   echo "for istio 1.6, only have single operator and deleting the iop is sufficient to remove all the default control plane objects"
 else
-  echo "we need to do x uninstall or older control plane objects will not be deleted"
+  echo "we need to do x uninstall or control plane objects will not be deleted"
   $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/istio-operator-$istiover-no-revision.yaml
   echo going to settle for 10 seconds
   sleep 10
@@ -170,42 +178,6 @@ sleep 15
 $script_path/show-istio-objects.sh
 ;;
 
-
-99)
-
-# no explicit way to delete operator that is non-revisioned
-if [[ $istiover =~ ^1.6 ]] ; then 
-  kubectl get deployment -n istio-operator
-  echo "since this is 1.6, you cannot have a --revision flag and there is only a single operator"
-  echo "therefore we are not deleting the operator.  Deleting the iop will delete all relevant default control plane objects"
-else
-  kubectl delete deployment/istio-operator -n istio-operator
-  kubectl delete service/istio-operator -n istio-operator
-  echo going to settle for 15 seconds
-  sleep 15
-fi
-
-timeout 120s kubectl delete -n istio-system iop/istio-control-plane
-if [ $? -eq 0 ]; then
-  echo "iop default deleted normally"
-else
-  echo "iop default not deleted normally after waiting 90 seconds, going to empty metadata.finalizers list"
-  kubectl get istiooperator.install.istio.io/istio-control-plane -n istio-system -o json | jq '.metadata.finalizers = []' | kubectl replace -f -
-  echo going to settle for 15 seconds
-  sleep 30
-fi
-
-if [[ $istiover =~ ^1.6 ]] ; then 
-  echo "for istio 1.6, only have single operator and deleting the iop is sufficient to remove all the default control plane objects"
-else
-  #echo "do we need to do x uninstall ?"
-  $script_path/istio-$istiover/bin/istioctl x uninstall --filename $script_path/istio-operator-$istiover-no-revision.yaml
-  echo going to settle for 10 seconds
-  sleep 10
-fi
-
-$script_path/show-istio-objects.sh
-;;
 
 
 

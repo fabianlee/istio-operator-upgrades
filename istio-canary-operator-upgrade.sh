@@ -20,6 +20,22 @@ if [[ $istiover_new =~ ^1.6 ]] ; then
   exit 1
 fi
 
+# check for existion revisioned iop
+read -r -d '' cmd <<EOF
+kubectl get deployment \
+-n istio-system \
+--output jsonpath='{.items[?(@.spec.selector.matchLabels.istio\.io/rev=="$revision_hyphenated_old")].metadata.name}'
+EOF
+iop_name=$($cmd | tr -d "'")
+if [ -n "$iop_name" ]; then
+  echo "found older iop using $revision_hyphenated_old named $iop_name"
+else
+  echo "ERROR could not find existing revisioned iop, aborting."
+  echo "here is the list of current iop:"
+  kubectl get -n istio-system iop
+  exit 2
+fi
+
 
 function show_menu() {
 echo ""
@@ -137,7 +153,6 @@ $script_path/show-istio-objects.sh
 
 # construct jsonpath filter in heredoc to avoid complex escaping
 # we lookup operator name with revision instead of name because it could have been created with revision or default
-
 #read -r -d '' cmd <<EOF
 #kubectl get deployment \
 #-n istio-system \
